@@ -70,6 +70,7 @@ void ofxTextureMultiOutput::draw(ofTexture& t, ofRectangle whereToDraw){
 						 texInput.width * t.getWidth(), texInput.height * t.getHeight() //tex size x, tex size y
 						 );
 	}
+	ofPopMatrix();
 }
 
 

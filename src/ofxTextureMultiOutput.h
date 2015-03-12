@@ -31,6 +31,8 @@
  +---+---+---+---+ outY (2)
  | 4 | 5 | 6 | 7 |  |
  +---+---+---+---+
+ 
+ You can also decide rotation on each individual section
 
  */
 
@@ -38,7 +40,15 @@ class ofxTextureMultiOutput{
 
 public:
 
-	void setup(int inX, int inY, int outX, int outY);
+	enum Rotation{
+		NO_ROTATE = 0, //using the enum val as the number of 90º rotations!
+		ROTATE_90 = 1,
+		ROTATE_180 = 2,
+		ROTATE_270 = 3
+	};
+
+	void setup(int inX, int inY, int outX, int outY, Rotation r);
+	void setScreenRotationForIndex(Rotation r, int screenIndex);
 
 	void draw(ofTexture& tex, ofRectangle whereToDraw);
 
@@ -54,8 +64,11 @@ private:
 	int outX;
 	int outY;
 
-	map<int, ofRectangle> inputs; 	//mapped [0..1]
-	map<int, ofRectangle> outputs; 	//mapped [0..1]
+	Rotation rotation;
+	map<int, ofRectangle> 	inputs; 	//mapped [0..1]
+	map<int, ofRectangle> 	outputs; 	//mapped [0..1]
+	map<int, Rotation>		rotations;
+
 
 };
 

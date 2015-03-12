@@ -9,7 +9,8 @@
 #include "ofxTextureMultiOutput.h"
 
 
-void ofxTextureMultiOutput::setup(int inX_, int inY_, int outX_, int outY_){
+void ofxTextureMultiOutput::setup(int inX_, int inY_, int outX_, int outY_, Rotation rot){
+	rotation = rot;
 	inX = inX_;
 	inY = inY_;
 	outX = outX_;
@@ -33,6 +34,7 @@ void ofxTextureMultiOutput::setup(int inX_, int inY_, int outX_, int outY_){
 			r.x = i * inW;
 			r.y = j * inH;
 			inputs[c] = r;
+			rotations[c] = rot;
 			c++;
 		}
 	}
@@ -52,6 +54,10 @@ void ofxTextureMultiOutput::setup(int inX_, int inY_, int outX_, int outY_){
 }
 
 
+void setScreenRotationForIndex(ofxTextureMultiOutput::Rotation r, int screenIndex){
+
+}
+
 void ofxTextureMultiOutput::draw(ofTexture& t, ofRectangle whereToDraw){
 
 	//per unit sizes
@@ -60,16 +66,89 @@ void ofxTextureMultiOutput::draw(ofTexture& t, ofRectangle whereToDraw){
 
 	ofPushMatrix();
 	ofTranslate(whereToDraw.x, whereToDraw.y);
+
+	ofMesh mesh;
+	mesh.setMode(OF_PRIMITIVE_TRIANGLES);
+	//make space for all the vertex and tex coords we will provide
+	mesh.getVertices().resize(6 * num);
+	mesh.getTexCoords().resize(6 * num);
+	mesh.enableTextures();
+
+
 	for(int i = 0; i < num; i++){
-		//int i = int(0.1 * ofGetFrameNum())%num; //debug
+
 		ofRectangle & texInput = inputs[i];
 		ofRectangle & texOutput = outputs[i];
-		t.drawSubsection(whereToDraw.width * texOutput.x, whereToDraw.height * texOutput.y, //x, y
-						 outW, outH,	//w, h
-						 texInput.x * t.getWidth(), texInput.y * t.getHeight(), //tex origin x, tex origin y
-						 texInput.width * t.getWidth(), texInput.height * t.getHeight() //tex size x, tex size y
-						 );
+		Rotation rot = rotations[i];
+
+		float x = whereToDraw.width * texOutput.x;
+		float y = whereToDraw.height * texOutput.y;
+/*
+v0       v1
+   *----*
+   |t\ t|
+   |2 \1|
+   *----*
+v3       v2
+*/
+
+		ofVec2f v0 = ofVec2f(x, y);
+		ofVec2f v1 = ofVec2f(x + outW, y);
+		ofVec2f v2 = ofVec2f(x + outW, y + outH);
+		ofVec2f v3 = ofVec2f(x, y + outH);
+
+//		t.drawSubsection(whereToDraw.width * texOutput.x, whereToDraw.height * texOutput.y, //x, y
+//						 outW, outH,	//w, h
+//						 texInput.x * t.getWidth(), texInput.y * t.getHeight(), //tex origin x, tex origin y
+//						 texInput.width * t.getWidth(), texInput.height * t.getHeight() //tex size x, tex size y
+//						 );
+
+		//vertex for triangle 1 (v0, v1, v2)
+		mesh.getVertices()[i * 6 + 0].set(v0);
+		mesh.getVertices()[i * 6 + 1].set(v1);
+		mesh.getVertices()[i * 6 + 2].set(v2);
+
+		//vertex for triangle 2 (v0, v2, v3)
+		mesh.getVertices()[i * 6 + 3].set(v0);
+		mesh.getVertices()[i * 6 + 4].set(v2);
+		mesh.getVertices()[i * 6 + 5].set(v3);
+
+
+		//now lets do the tex coords
+		float tx = texInput.x * t.getWidth();
+		float ty = texInput.y * t.getHeight();
+		float tw = texInput.width * t.getWidth();
+		float th = texInput.height * t.getHeight();
+
+		vector<ofVec2f> texC;
+		texC.resize(4);
+		texC[0] = ofVec2f(tx, ty);
+		texC[1] = ofVec2f(tx + tw , ty);
+		texC[2] = ofVec2f(tx + tw, ty + th);
+		texC[3] = ofVec2f(tx, ty + th);
+
+		for(int i = 0; i < (int)rot; i++){ //shift around all tex coord as many times as we need to rotate 90
+			ofVec2f temp = texC[3];
+			texC.erase(texC.end() - 1);
+			texC.insert(texC.begin(), temp);
+		}
+
+		//tex coord for triangle 1 (v0, v1, v2)
+		mesh.getTexCoords()[i * 6 + 0].set(texC[0]);
+		mesh.getTexCoords()[i * 6 + 1].set(texC[1]);
+		mesh.getTexCoords()[i * 6 + 2].set(texC[2]);
+
+		//tex coord for triangle 2 (v0, v2, v3)
+		mesh.getTexCoords()[i * 6 + 3].set(texC[0]);
+		mesh.getTexCoords()[i * 6 + 4].set(texC[2]);
+		mesh.getTexCoords()[i * 6 + 5].set(texC[3]);
+
 	}
+
+	t.bind();
+	mesh.draw();
+	t.unbind();
+
 	ofPopMatrix();
 }
 
@@ -87,7 +166,7 @@ void ofxTextureMultiOutput::drawDebugInput(float x, float y, float w, float h){
 		r.width = r.width * w;
 		r.height = r.height * h;
 		ofDrawRectangle(r);
-		ofDrawBitmapString(ofToString(it->first), 10 + r.x, 10 + r.y);
+		ofDrawBitmapString(ofToString(it->first), 10 + r.x, 20 + r.y);
 		++it;
 	}
 	ofFill();
@@ -99,7 +178,10 @@ void ofxTextureMultiOutput::drawDebugOutput(float x, float y, float w, float h){
 	ofPushMatrix();
 	ofTranslate(x, y);
 	ofNoFill();
+	ofDrawBitmapMode m = ofGetStyle().drawBitmapMode;
+	ofSetDrawBitmapMode(OF_BITMAPMODE_MODEL);
 
+	int c = 0;
 	map<int, ofRectangle>::iterator it = outputs.begin();
 	while(it != outputs.end()){
 		ofRectangle r = it->second;
@@ -108,8 +190,13 @@ void ofxTextureMultiOutput::drawDebugOutput(float x, float y, float w, float h){
 		r.width = r.width * w;
 		r.height = r.height * h;
 		ofDrawRectangle(r);
-		ofDrawBitmapString(ofToString(it->first), 10 + r.x, 10 + r.y);
+		ofPushMatrix();
+		ofTranslate(10 + r.x, 20 + r.y);
+		ofRotate(90, 0, 0, 1);
+		ofDrawBitmapString(ofToString(it->first), 0, 0 );
+		ofPopMatrix();
 		++it;
+		c++;
 	}
 	ofFill();
 	ofPopMatrix();

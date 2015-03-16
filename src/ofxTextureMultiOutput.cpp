@@ -192,7 +192,8 @@ void ofxTextureMultiOutput::drawDebugOutput(float x, float y, float w, float h){
 		ofDrawRectangle(r);
 		ofPushMatrix();
 		ofTranslate(10 + r.x, 20 + r.y);
-		ofRotate(90, 0, 0, 1);
+		Rotation rot = rotations[c];
+		ofRotate(90 * (int)rot, 0, 0, 1);
 		ofDrawBitmapString(ofToString(it->first), 0, 0 );
 		ofPopMatrix();
 		++it;

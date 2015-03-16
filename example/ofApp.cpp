@@ -28,7 +28,7 @@ void ofApp::setup(){
 	output.setup(
 				 8, 1,	//your input is 8 x 1
 				 4, 2,	//define your output to 4 x 2
-				 ofxTextureMultiOutput::ROTATE_90
+				 ofxTextureMultiOutput::ROTATE_270
 				 );
 }
 

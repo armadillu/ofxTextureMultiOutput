@@ -201,4 +201,5 @@ void ofxTextureMultiOutput::drawDebugOutput(float x, float y, float w, float h){
 	}
 	ofFill();
 	ofPopMatrix();
+	ofSetDrawBitmapMode(m);
 }
